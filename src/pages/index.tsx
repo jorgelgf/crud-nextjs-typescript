@@ -3,27 +3,42 @@ import Tabela from "../components/Tabela";
 import Cliente from "../core/Cliente";
 import Button from "../components/Button";
 import Formulario from "../components/Formulario";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import ClienteRepositorio from "../core/ClienteRepositorio";
+import ColecaoCliente from "../backend/db/ColecaoCliente";
 export default function Home() {
   const [visivel, setVisivel] = useState<"tabela" | "form">("tabela");
+  const [cliente, setCliente] = useState<Cliente>(Cliente.vazio());
+  const [clientes, setClientes] = useState<Cliente[]>([]);
 
-  const clientes = [
-    new Cliente("Ana", 33, "1"),
-    new Cliente("Bia", 45, "2"),
-    new Cliente("Pedro", 23, "3"),
-    new Cliente("José", 54, "4"),
-  ];
+  const repo: ClienteRepositorio = new ColecaoCliente();
 
-  const clienteSelecionado = (cliente: Cliente) => {
-    console.log(cliente.nome);
-  };
-  const clienteExcluido = (cliente: Cliente) => {
-    console.log(`Excluído:  ${cliente.nome}`);
-  };
-  function salvarCliente(cliente: Cliente) {
-    console.log(cliente);
+  useEffect(obterTodos, []);
+
+  function obterTodos() {
+    repo.obterTodos().then((clientes) => {
+      setClientes(clientes);
+      setVisivel("tabela");
+    });
   }
 
+  const clienteSelecionado = (cliente: Cliente) => {
+    setCliente(cliente);
+    setVisivel("form");
+  };
+  const clienteExcluido = async (cliente: Cliente) => {
+    await repo.excluir(cliente);
+    obterTodos();
+  };
+  const salvarCliente = async (cliente: Cliente) => {
+    await repo.salvar(cliente);
+    obterTodos();
+  };
+
+  function novoCliente() {
+    setCliente(Cliente.vazio());
+    setVisivel("form");
+  }
   return (
     <div
       className={`
@@ -36,11 +51,7 @@ export default function Home() {
         {visivel === "tabela" ? (
           <>
             <div className="flex justify-end">
-              <Button
-                cor="green"
-                className="mb-4"
-                onClick={() => setVisivel("form")}
-              >
+              <Button cor="green" className="mb-4" onClick={novoCliente}>
                 Novo Cliente
               </Button>
             </div>
@@ -53,7 +64,7 @@ export default function Home() {
           </>
         ) : (
           <Formulario
-            cliente={clientes[0]}
+            cliente={cliente}
             clienteMudou={salvarCliente}
             cancelado={() => setVisivel("tabela")}
           />
